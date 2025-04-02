@@ -27,3 +27,35 @@ WHERE o.order_id = 11;
 -- DELETE: Remove a product by ID
 DELETE FROM Products
 WHERE product_id = 11;
+
+
+SELECT 
+    o.order_id,
+    o.order_date,
+    s.name AS supplier_name,
+    p.name AS product_name,
+    od.quantity,
+    od.unit_price,
+    (od.quantity * od.unit_price) AS total_price
+FROM Orders o
+JOIN OrderDetails od ON o.order_id = od.order_id
+JOIN Products p ON od.product_id = p.product_id
+JOIN Suppliers s ON o.supplier_id = s.supplier_id
+ORDER BY o.order_date DESC;
+
+SELECT 
+    p.name AS product_name,
+    SUM(od.quantity) AS total_quantity_ordered
+FROM OrderDetails od
+JOIN Products p ON od.product_id = p.product_id
+GROUP BY p.name
+ORDER BY total_quantity_ordered DESC;
+
+
+SELECT 
+    product_id,
+    name,
+    quantity_in_stock
+FROM Products
+WHERE quantity_in_stock < 10;
+
