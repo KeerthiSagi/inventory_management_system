@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Add Order</h2>
+<form method="POST">
+    <label>Supplier:</label>
+    <select name="supplier_id">
+        {% for supplier in suppliers %}
+            <option value="{{ supplier.supplier_id }}">{{ supplier.name }}</option>
+        {% endfor %}
+    </select><br><br>
+    <h3>Order Items</h3>
+    {% for product in products %}
+        <div>
+            <strong>{{ product.name }}</strong><br>
+            Quantity: <input type="number" name="quantity_{{ product.product_id }}" value="0">
+            Price: <input type="number" step="0.01" name="price_{{ product.product_id }}" value="{{ product.price }}"><br><br>
+        </div>
+    {% endfor %}
+    <input type="submit" value="Place Order">
+</form>
+{% endblock %}
