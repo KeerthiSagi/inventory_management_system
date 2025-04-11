@@ -185,6 +185,68 @@ def dashboard():
         low_stock_count=low_stock_count
     )
 
+from sqlalchemy import func
+from datetime import datetime, timedelta
+
+@app.route('/report/most_ordered_products')
+def most_ordered_products():
+    results = db.session.execute('''
+        SELECT p.name AS product_name, SUM(od.quantity) AS total_quantity
+        FROM OrderDetails od
+        JOIN Products p ON od.product_id = p.product_id
+        GROUP BY p.name
+        ORDER BY total_quantity DESC
+    ''')
+    return render_template('reports.html', report_title="Most Ordered Products", report_rows=results, headers=["Product Name", "Total Quantity"])
+
+@app.route('/report/low_stock_products')
+def low_stock_products():
+    results = db.session.execute('''
+        SELECT name, quantity_in_stock
+        FROM Products
+        WHERE quantity_in_stock < (
+            SELECT AVG(quantity_in_stock) FROM Products
+        )
+    ''')
+    return render_template('reports.html', report_title="Low Stock Products (Below Average)", report_rows=results, headers=["Product Name", "Stock"])
+
+@app.route('/report/supplier_order_summary')
+def supplier_order_summary():
+    results = db.session.execute('''
+        SELECT s.name AS supplier_name, COUNT(o.order_id) AS order_count, SUM(od.quantity) AS total_quantity
+        FROM Suppliers s
+        JOIN Orders o ON s.supplier_id = o.supplier_id
+        JOIN OrderDetails od ON o.order_id = od.order_id
+        GROUP BY s.name
+        ORDER BY order_count DESC
+    ''')
+    return render_template('reports.html', report_title="Supplier Order Summary", report_rows=results, headers=["Supplier Name", "Orders", "Total Quantity"])
+
+@app.route('/report/recent_orders')
+def recent_orders():
+    last_7_days = datetime.utcnow() - timedelta(days=7)
+    results = db.session.execute('''
+        SELECT o.order_id, s.name AS supplier_name, o.order_date, SUM(od.quantity * od.unit_price) AS total_amount
+        FROM Orders o
+        JOIN Suppliers s ON o.supplier_id = s.supplier_id
+        JOIN OrderDetails od ON o.order_id = od.order_id
+        WHERE o.order_date >= :date
+        GROUP BY o.order_id, s.name, o.order_date
+        ORDER BY o.order_date DESC
+    ''', {"date": last_7_days})
+    return render_template('reports.html', report_title="Recent Orders (Last 7 Days)", report_rows=results, headers=["Order ID", "Supplier", "Date", "Total Amount"])
+
+@app.route('/report/reorder_suggestions')
+def reorder_suggestions():
+    results = db.session.execute('''
+        SELECT p.name, SUM(od.quantity) AS total_ordered, p.quantity_in_stock
+        FROM OrderDetails od
+        JOIN Products p ON od.product_id = p.product_id
+        GROUP BY p.product_id
+        HAVING total_ordered > 10 AND p.quantity_in_stock < 5
+        ORDER BY total_ordered DESC
+    ''')
+    return render_template('reports.html', report_title="Reorder Suggestions", report_rows=results, headers=["Product Name", "Total Ordered", "Stock Left"])
 
 
 if __name__ == '__main__':
