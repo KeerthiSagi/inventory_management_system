@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Reports - Order Summary</h2>
+
+<!-- Predefined SQL Report Buttons -->
+<div class="mb-3 d-flex flex-wrap gap-2">
+  <a href="{{ url_for('most_ordered_products') }}" class="btn btn-outline-primary">Most Ordered Products</a>
+  <a href="{{ url_for('low_stock_products') }}" class="btn btn-outline-warning">Low Stock Products</a>
+  <a href="{{ url_for('supplier_order_summary') }}" class="btn btn-outline-success">Supplier Order Summary</a>
+  <a href="{{ url_for('recent_orders') }}" class="btn btn-outline-info">Recent Orders</a>
+  <a href="{{ url_for('reorder_suggestions') }}" class="btn btn-outline-danger">Reorder Suggestions</a>
+</div>
+
+<!-- Dynamic SQL Query Result Table -->
+{% if report_rows %}
+  <div class="mt-4">
+    <h4>{{ report_title }}</h4>
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark">
+        <tr>
+          {% for header in headers %}
+            <th>{{ header }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report_rows %}
+          <tr>
+            {% for col in row %}
+              <td>{{ col }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="mt-4 text-muted">Click a button above to generate a report.</p>
+{% endif %}
+{% endblock %}
