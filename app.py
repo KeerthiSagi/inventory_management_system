@@ -290,6 +290,28 @@ def reorder_suggestions():
     '''))
     return render_template('reports.html', report_title="Reorder Suggestions", report_rows=results, headers=["Product Name", "Total Ordered", "Stock Left"])
 
+@app.route('/restock_product', methods=['POST'])
+def restock_product_inline():
+    product_id = int(request.form['product_id'])
+    quantity = int(request.form['quantity'])
+    note = request.form.get('notes', '')
+
+    product = Product.query.get_or_404(product_id)
+    product.quantity_in_stock += quantity
+
+    txn = InventoryTransaction(
+        product_id=product_id,
+        transaction_type='IN',
+        quantity_changed=quantity,
+        transaction_date=datetime.utcnow().date(),
+        notes=note or "Restock via product page"
+    )
+    db.session.add(txn)
+    db.session.commit()
+
+    flash(f'{quantity} units added to {product.name}')
+    return redirect(url_for('view_products'))
+
 
 if __name__ == '__main__':
     with app.app_context():
