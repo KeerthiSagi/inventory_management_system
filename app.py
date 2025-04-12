@@ -124,6 +124,7 @@ def add_order():
     suppliers = Supplier.query.all()
     products = Product.query.all()
     if request.method == 'POST':
+        
         supplier_id = request.form['supplier_id']
         order = Order(supplier_id=supplier_id)
         db.session.add(order)
@@ -133,12 +134,27 @@ def add_order():
             qty = int(request.form.get(f'quantity_{product.product_id}', 0))
             price = float(request.form.get(f'price_{product.product_id}', 0.0))
             if qty > 0:
+                if product.quantity_in_stock < qty:
+                    flash(f"Not enough stock for {product.name}. Available: {product.quantity_in_stock}", 'danger')
+                    return redirect(url_for('add_order'))
+
                 detail = OrderDetail(order_id=order.order_id, product_id=product.product_id, quantity=qty, unit_price=price)
                 db.session.add(detail)
-                product.quantity_in_stock += qty
+
+                product.quantity_in_stock -= qty  # Subtracting stock for customer order
+
+                txn = InventoryTransaction(
+                    product_id=product.product_id,
+                    transaction_type='OUT',
+                    quantity_changed=-qty,
+                    transaction_date=datetime.utcnow().date(),
+                    notes=f"Auto-OUT for Order #{order.order_id}"
+                )
+                db.session.add(txn)
         db.session.commit()
         flash('Order placed successfully!')
         return redirect(url_for('view_orders'))
+
 
     return render_template('add_order.html', suppliers=suppliers, products=products)
 
