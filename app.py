@@ -26,6 +26,7 @@ def add_product():
         description = request.form['description']
         price = float(request.form['price'])
         quantity = int(request.form['quantity_in_stock'])
+        notes = request.form.get('notes', '')
 
         new_product = Product(
             name=name,
@@ -43,7 +44,7 @@ def add_product():
                 transaction_type='IN',
                 quantity_changed=quantity,
                 transaction_date=datetime.utcnow().date(),
-                notes="Initial stock for new product"
+                notes=notes or "Initial stock for new product"
             )
             db.session.add(txn)
 
@@ -127,6 +128,7 @@ def add_order():
         
         supplier_id = request.form['supplier_id']
         order = Order(supplier_id=supplier_id)
+        order_note = request.form.get('order_note', '')
         db.session.add(order)
         db.session.flush()  # to get order_id before commit
 
@@ -148,8 +150,9 @@ def add_order():
                     transaction_type='OUT',
                     quantity_changed=-qty,
                     transaction_date=datetime.utcnow().date(),
-                    notes=f"Auto-OUT for Order #{order.order_id}"
+                    notes=order_note or f"Auto-OUT for Order #{order.order_id}"
                 )
+
                 db.session.add(txn)
         db.session.commit()
         flash('Order placed successfully!')
