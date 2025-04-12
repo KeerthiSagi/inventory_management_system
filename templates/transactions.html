@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Inventory Transactions</h2>
-<a href="{{ url_for('add_transaction') }}" class="btn btn-primary mb-3">Add New Transaction</a>
+<!-- <a href="{{ url_for('add_transaction') }}" class="btn btn-primary mb-3">Add New Transaction</a> -->
 <table class="table table-bordered table-hover">
     <thead class="table-dark">
         <tr>
@@ -11,11 +11,11 @@
     <tbody>
     {% for txn in transactions %}
     <tr>
-        <td>{{ txn.product.name }}</td>
+        <td>{{ txn.product_name }}</td>
         <td>{{ txn.transaction_type }}</td>
         <td>{{ txn.quantity_changed }}</td>
         <td>{{ txn.notes }}</td>
-        <td>{{ txn.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else 'N/A' }}</td>
     </tr>
     {% endfor %}
     </tbody>

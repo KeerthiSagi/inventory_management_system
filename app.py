@@ -41,6 +41,7 @@ def add_product():
         if quantity > 0:
             txn = InventoryTransaction(
                 product_id=new_product.product_id,
+                product_name=new_product.name,
                 transaction_type='IN',
                 quantity_changed=quantity,
                 transaction_date=datetime.utcnow().date(),
@@ -147,6 +148,7 @@ def add_order():
 
                 txn = InventoryTransaction(
                     product_id=product.product_id,
+                    product_name=product.name,
                     transaction_type='OUT',
                     quantity_changed=-qty,
                     transaction_date=datetime.utcnow().date(),
@@ -186,6 +188,7 @@ def add_transaction():
         txn = InventoryTransaction(
             product_id=product_id,
             transaction_type=txn_type,
+            product_name=product.name,
             quantity_changed=quantity,
             transaction_date=datetime.utcnow().date(),  # match DATE column
             notes=notes
@@ -301,6 +304,7 @@ def restock_product_inline():
 
     txn = InventoryTransaction(
         product_id=product_id,
+        product_name=product.name,
         transaction_type='IN',
         quantity_changed=quantity,
         transaction_date=datetime.utcnow().date(),

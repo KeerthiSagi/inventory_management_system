@@ -40,6 +40,7 @@ class InventoryTransaction(db.Model):
     transaction_id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('Products.product_id'), nullable=False)
     transaction_type = db.Column(db.String(10), nullable=False)
+    product_name = db.Column(db.String(100))
     quantity_changed = db.Column(db.Integer, nullable=False)
     transaction_date = db.Column(db.Date, nullable=False)  # <- match your DB
     notes = db.Column(db.Text)
