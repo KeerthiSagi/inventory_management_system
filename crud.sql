@@ -67,7 +67,23 @@ JOIN Products p ON t.product_id = p.product_id
 SET t.product_name = p.name
 WHERE t.product_name IS NULL;
 
+ALTER TABLE OrderDetails
+ADD COLUMN product_name VARCHAR(100);
+
 UPDATE OrderDetails d
 JOIN Products p ON d.product_id = p.product_id
 SET d.product_name = p.name
 WHERE d.product_name IS NULL;
+
+ALTER TABLE InventoryTransactions ADD COLUMN order_amount FLOAT;
+
+UPDATE InventoryTransactions t
+JOIN (
+    SELECT o.order_id, SUM(d.quantity * d.unit_price) AS total_amount
+    FROM Orders o
+    JOIN OrderDetails d ON o.order_id = d.order_id
+    GROUP BY o.order_id
+) AS totals
+ON t.transaction_type = 'OUT' AND t.product_id IS NOT NULL
+AND t.transaction_id = totals.order_id  -- 🧠 assumes same ID mapping
+SET t.order_amount = totals.total_amount;
