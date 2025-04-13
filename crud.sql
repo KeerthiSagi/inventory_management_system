@@ -59,3 +59,15 @@ SELECT
 FROM Products
 WHERE quantity_in_stock < 10;
 
+ALTER TABLE InventoryTransactions
+ADD COLUMN product_name VARCHAR(100);
+
+UPDATE InventoryTransactions t
+JOIN Products p ON t.product_id = p.product_id
+SET t.product_name = p.name
+WHERE t.product_name IS NULL;
+
+UPDATE OrderDetails d
+JOIN Products p ON d.product_id = p.product_id
+SET d.product_name = p.name
+WHERE d.product_name IS NULL;
