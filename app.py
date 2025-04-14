@@ -127,10 +127,13 @@ def add_order():
     products = Product.query.all()
 
     if request.method == 'POST':
+        supplier_id = request.form['supplier_id']
         order_note = request.form.get('order_note', '')
-        order = Order(order_date=datetime.utcnow().date())  # supplier_id removed, optional
+
+        # Create the order and associate it with the supplier
+        order = Order(supplier_id=supplier_id, order_date=datetime.utcnow().date())
         db.session.add(order)
-        db.session.flush()  # So we can access order.order_id
+        db.session.flush()  # so we can access order.order_id
 
         total_items = 0
         ordered_products = []
@@ -140,10 +143,9 @@ def add_order():
             price = float(request.form.get(f'price_{product.product_id}', 0.0))
 
             if qty > 0:
-                # ✅ Track ordered items
                 ordered_products.append((product, qty, price))
 
-                # ✅ Add order detail
+                # Add OrderDetail
                 detail = OrderDetail(
                     order_id=order.order_id,
                     product_id=product.product_id,
@@ -153,28 +155,27 @@ def add_order():
                 )
                 db.session.add(detail)
 
-                # ✅ Update product stock
+                # Update inventory (OUT)
                 product.quantity_in_stock -= qty
                 total_items += qty
+
+                # Log individual OUT transaction for each product
+                txn = InventoryTransaction(
+                    product_id=product.product_id,
+                    product_name=product.name,
+                    transaction_type='OUT',
+                    quantity_changed=-qty,
+                    transaction_date=datetime.utcnow().date(),
+                    notes=order_note or f"Auto-OUT for Order #{order.order_id}"
+                )
+                db.session.add(txn)
 
         if not ordered_products:
             flash("Please select at least one product to order.", "danger")
             return redirect(url_for('add_order'))
 
-        # ✅ Log a single transaction for the order
-        first_product = ordered_products[0][0]
-        txn = InventoryTransaction(
-            product_id=first_product.product_id,
-            product_name=first_product.name,
-            transaction_type='OUT',
-            quantity_changed=-total_items,
-            transaction_date=datetime.utcnow().date(),
-            notes=order_note or f"Auto-IN for Order #{order.order_id}"
-        )
-        db.session.add(txn)
-
         db.session.commit()
-        flash('Order placed and inventory updated successfully!')
+        flash('Order placed successfully and inventory updated.')
         return redirect(url_for('view_orders'))
 
     return render_template('add_order.html', suppliers=suppliers, products=products)
