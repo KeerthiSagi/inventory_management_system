@@ -125,41 +125,57 @@ def view_orders():
 def add_order():
     suppliers = Supplier.query.all()
     products = Product.query.all()
+
     if request.method == 'POST':
-        
-        supplier_id = request.form['supplier_id']
-        order = Order(supplier_id=supplier_id)
         order_note = request.form.get('order_note', '')
+        order = Order(order_date=datetime.utcnow().date())  # supplier_id removed, optional
         db.session.add(order)
-        db.session.flush()  # to get order_id before commit
+        db.session.flush()  # So we can access order.order_id
+
+        total_items = 0
+        ordered_products = []
 
         for product in products:
             qty = int(request.form.get(f'quantity_{product.product_id}', 0))
             price = float(request.form.get(f'price_{product.product_id}', 0.0))
+
             if qty > 0:
-                if product.quantity_in_stock < qty:
-                    flash(f"Not enough stock for {product.name}. Available: {product.quantity_in_stock}", 'danger')
-                    return redirect(url_for('add_order'))
+                # ✅ Track ordered items
+                ordered_products.append((product, qty, price))
 
-                detail = OrderDetail(order_id=order.order_id, product_id=product.product_id, quantity=qty, unit_price=price)
-                db.session.add(detail)
-
-                product.quantity_in_stock -= qty  # Subtracting stock for customer order
-
-                txn = InventoryTransaction(
+                # ✅ Add order detail
+                detail = OrderDetail(
+                    order_id=order.order_id,
                     product_id=product.product_id,
                     product_name=product.name,
-                    transaction_type='OUT',
-                    quantity_changed=-qty,
-                    transaction_date=datetime.utcnow().date(),
-                    notes=order_note or f"Auto-OUT for Order #{order.order_id}"
+                    quantity=qty,
+                    unit_price=price
                 )
+                db.session.add(detail)
 
-                db.session.add(txn)
+                # ✅ Update product stock
+                product.quantity_in_stock -= qty
+                total_items += qty
+
+        if not ordered_products:
+            flash("Please select at least one product to order.", "danger")
+            return redirect(url_for('add_order'))
+
+        # ✅ Log a single transaction for the order
+        first_product = ordered_products[0][0]
+        txn = InventoryTransaction(
+            product_id=first_product.product_id,
+            product_name=first_product.name,
+            transaction_type='OUT',
+            quantity_changed=-total_items,
+            transaction_date=datetime.utcnow().date(),
+            notes=order_note or f"Auto-IN for Order #{order.order_id}"
+        )
+        db.session.add(txn)
+
         db.session.commit()
-        flash('Order placed successfully!')
+        flash('Order placed and inventory updated successfully!')
         return redirect(url_for('view_orders'))
-
 
     return render_template('add_order.html', suppliers=suppliers, products=products)
 
@@ -184,16 +200,21 @@ def add_transaction():
         else:
             quantity = abs(quantity)
 
-        # FIX: Include transaction_date to match your table definition
-        txn = InventoryTransaction(
-            product_id=product_id,
-            transaction_type=txn_type,
-            product_name=product.name,
-            quantity_changed=quantity,
-            transaction_date=datetime.utcnow().date(),  # match DATE column
-            notes=notes
-        )
+        total_amount = sum(
+        int(request.form.get(f'quantity_{product.product_id}', 0)) *
+        float(request.form.get(f'price_{product.product_id}', 0.0))
+        for product in products
+    )
 
+        txn = InventoryTransaction(
+        product_id=first_product.product_id,
+        product_name=first_product.name,
+        transaction_type='OUT',
+        quantity_changed=-total_items,
+        transaction_date=datetime.utcnow().date(),
+        notes=order_note or f"Auto-OUT for Order #{order.order_id}",
+        order_amount=total_amount
+    )
         db.session.add(txn)
 
         product = Product.query.get(product_id)
@@ -315,6 +336,49 @@ def restock_product_inline():
 
     flash(f'{quantity} units added to {product.name}')
     return redirect(url_for('view_products'))
+
+# 1. Inventory Flow Summary (IN vs OUT per product)
+@app.route('/report/inventory_flow_summary')
+def inventory_flow_summary():
+    result = db.session.execute(text("""
+        SELECT 
+            product_name,
+            SUM(CASE WHEN transaction_type = 'IN' THEN quantity_changed ELSE 0 END) AS total_in,
+            SUM(CASE WHEN transaction_type = 'OUT' THEN ABS(quantity_changed) ELSE 0 END) AS total_out
+        FROM InventoryTransactions
+        GROUP BY product_name
+    """))
+    return render_template("reports.html", report_title="Inventory Flow Summary", report_rows=result, headers=["Product", "Total IN", "Total OUT"])
+
+# 2. Stock Valuation Report (current stock × price)
+@app.route('/report/stock_valuation')
+def stock_valuation():
+    result = db.session.execute(text("""
+        SELECT 
+            name AS product_name,
+            quantity_in_stock,
+            price,
+            (quantity_in_stock * price) AS stock_value
+        FROM Products
+        ORDER BY stock_value DESC
+    """))
+    return render_template("reports.html", report_title="Stock Valuation Report", report_rows=result, headers=["Product", "Stock", "Unit Price", "Total Value"])
+
+# 3. Inactive Products (no transactions in last 30 days)
+@app.route('/report/inactive_products')
+def inactive_products():
+    result = db.session.execute(text("""
+        SELECT 
+            name AS product_name
+        FROM Products
+        WHERE product_id NOT IN (
+            SELECT DISTINCT product_id 
+            FROM InventoryTransactions 
+            WHERE transaction_date > CURDATE() - INTERVAL 30 DAY
+        )
+    """))
+    return render_template("reports.html", report_title="Inactive Products (30+ Days)", report_rows=result, headers=["Product"])
+
 
 
 if __name__ == '__main__':

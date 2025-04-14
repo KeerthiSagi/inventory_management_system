@@ -4,11 +4,18 @@
 
 <!-- Predefined SQL Report Buttons -->
 <div class="mb-3 d-flex flex-wrap gap-2">
-  <a href="{{ url_for('most_ordered_products') }}" class="btn btn-outline-primary">Most Ordered Products</a>
-  <a href="{{ url_for('low_stock_products') }}" class="btn btn-outline-warning">Low Stock Products</a>
-  <a href="{{ url_for('supplier_order_summary') }}" class="btn btn-outline-success">Supplier Order Summary</a>
-  <a href="{{ url_for('recent_orders') }}" class="btn btn-outline-info">Recent Orders</a>
-  <a href="{{ url_for('reorder_suggestions') }}" class="btn btn-outline-danger">Reorder Suggestions</a>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('most_ordered_products') }}" class="btn btn-outline-primary">Most Ordered Products</a>
+    <a href="{{ url_for('low_stock_products') }}" class="btn btn-outline-warning">Low Stock Products</a>
+    <a href="{{ url_for('supplier_order_summary') }}" class="btn btn-outline-success">Supplier Order Summary</a>
+    <a href="{{ url_for('recent_orders') }}" class="btn btn-outline-info">Recent Orders</a>
+    <a href="{{ url_for('reorder_suggestions') }}" class="btn btn-outline-danger">Reorder Suggestions</a>
+    <a href="{{ url_for('inventory_flow_summary') }}" class="btn btn-outline-secondary">Inventory Flow Summary</a>
+    <a href="{{ url_for('stock_valuation') }}" class="btn btn-outline-dark">Stock Valuation Report</a>
+    <a href="{{ url_for('inactive_products') }}" class="btn btn-outline-primary">Inactive Products</a>
+  </div>
+  
+  
 </div>
 
 <!-- Dynamic SQL Query Result Table -->
